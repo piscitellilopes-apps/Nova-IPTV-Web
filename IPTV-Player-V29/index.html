@@ -405,7 +405,7 @@
                         <i class="fa-solid fa-search"></i>
                         <input type="text" placeholder="Suchen..." oninput="handleSearch(this.value)">
                     </div>
-                    <div class="user-badge">2029/10/01</div>
+                    <button id="installAppButton" hidden onclick="installWebApp()" style="background:#047857;color:white;border:0;padding:7px;border-radius:7px">App installieren</button><div class="user-badge">IPTV V29</div>
                 </div>
             </header>
 
@@ -470,6 +470,9 @@
             }
             if (!/^https?:\/\//i.test(host)) {document.getElementById('loginError').textContent='Bitte eine vollständige Serveradresse mit https:// eingeben.';return;}
             API.baseUrl = host; API.user = username; API.pass = password;
+            document.getElementById('loginError').textContent = '';
+            document.getElementById('loader').style.display = 'flex';
+            document.getElementById('loader').style.opacity = '1';
             try { localStorage.setItem(LOGIN_STORAGE_KEY, JSON.stringify({host,username,password})); } catch (e) {}
             document.getElementById('loginOverlay').style.display = 'none';
             initializeIPTV();
@@ -480,18 +483,43 @@
         let hlsInstance = null;
 
         function getUrl(action) {
-            return `${API.baseUrl}/player_api.php?username=${API.user}&password=${API.pass}&action=${action}`;
+            const url = new URL(API.baseUrl + '/player_api.php');
+            url.searchParams.set('username', API.user);
+            url.searchParams.set('password', API.pass);
+            url.searchParams.set('action', action);
+            return url.toString();
+        }
+        async function getJson(action) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 18000);
+            try {
+                const response = await fetch(getUrl(action), {signal:controller.signal, cache:'no-store'});
+                if (!response.ok) throw new Error('HTTP ' + response.status + ' vom IPTV-Server');
+                const data = await response.json();
+                if (!Array.isArray(data)) throw new Error('Unerwartete Serverantwort (keine Senderliste)');
+                return data;
+            } finally { clearTimeout(timer); }
+        }
+        function showConnectionError(err) {
+            const msg = err && err.name === 'AbortError'
+                ? 'Zeitüberschreitung: Der IPTV-Server antwortet nicht.'
+                : err instanceof TypeError
+                ? 'Netzwerk/CORS-Fehler: Der IPTV-Server erlaubt möglicherweise keine Browserzugriffe. HTTP-Streams können auf einer HTTPS-Seite blockiert werden.'
+                : 'Verbindung fehlgeschlagen: ' + (err && err.message ? err.message : 'Unbekannter Fehler');
+            document.getElementById('loginOverlay').style.display = 'flex';
+            document.getElementById('loginError').textContent = msg;
+            document.getElementById('loader').style.display = 'none';
         }
 
         async function initializeIPTV() {
             try {
                 const [cRes, sRes] = await Promise.all([
-                    fetch(getUrl('get_live_categories')),
-                    fetch(getUrl('get_live_streams'))
+                    getJson('get_live_categories'),
+                    getJson('get_live_streams')
                 ]);
                 
-                db.liveCats = await cRes.json() || [];
-                db.liveStreams = await sRes.json() || [];
+                db.liveCats = cRes;
+                db.liveStreams = sRes;
 
                 initLiveUI();
                 
@@ -517,7 +545,7 @@
                 }, 400);
 
             } catch (err) {
-                document.getElementById('loader').innerHTML = `<h3 style="color:#ef4444;font-size:13px;">Verbindungsfehler.</h3>`;
+                showConnectionError(err);
             }
         }
 
@@ -680,6 +708,21 @@
     </script>
     <script>
       window.addEventListener('DOMContentLoaded', restoreIPTVLogin);
+      window.addEventListener('beforeinstallprompt', event => {
+        event.preventDefault();
+        window.pwaInstallPrompt = event;
+        const btn = document.getElementById('installAppButton');
+        if (btn) btn.hidden = false;
+      });
+      async function installWebApp(){
+        if(window.pwaInstallPrompt){
+          window.pwaInstallPrompt.prompt();
+          await window.pwaInstallPrompt.userChoice;
+          window.pwaInstallPrompt = null;
+        } else {
+          alert('Falls keine Installation angeboten wird: Chrome-Menü öffnen und Zum Startbildschirm hinzufügen wählen. Eine Adressleiste verschwindet nur, wenn Android die Seite als eigenständige App startet.');
+        }
+      }
       if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
         window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
       }
