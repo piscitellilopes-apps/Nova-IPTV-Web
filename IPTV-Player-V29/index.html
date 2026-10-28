@@ -371,7 +371,7 @@
     </style>
 </head>
 <body>
-<div id="loginOverlay" style="position:fixed;inset:0;background:#080d17;z-index:100000;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto"><form onsubmit="connectIPTV(event)" style="width:min(420px,100%);padding:26px;background:#131d2e;border:1px solid #344663;border-radius:20px;display:grid;gap:14px"><h1 style="font-size:23px">IPTV Player Ultimate</h1><p style="font-size:13px;color:#b5c4db">Verbinde deinen eigenen IPTV-Zugang. Zugangsdaten werden nicht in dieser App gespeichert.</p><label>Serveradresse<input id="iptvHost" required type="url" placeholder="https://dein-anbieter.example" style="display:block;width:100%;padding:13px;margin-top:5px;background:#080d17;color:white;border:1px solid #52627b;border-radius:9px"></label><label>Benutzername<input id="iptvUser" required autocomplete="username" style="display:block;width:100%;padding:13px;margin-top:5px;background:#080d17;color:white;border:1px solid #52627b;border-radius:9px"></label><label>Passwort<input id="iptvPass" required type="password" autocomplete="current-password" style="display:block;width:100%;padding:13px;margin-top:5px;background:#080d17;color:white;border:1px solid #52627b;border-radius:9px"></label><p id="loginError" style="color:#ff8b8b;font-size:12px"></p><button type="submit" style="background:#2563eb;color:white;border:0;border-radius:10px;padding:14px;font-weight:700">IPTV verbinden</button><p style="color:#a5b4cb;font-size:11px">Hinweis: Für echte Benutzerkonten, geschützte Speicherung und HTTP-zu-HTTPS-Streaming wird zusätzlich ein sicherer Backend-Dienst benötigt.</p></form></div>
+<div id="loginOverlay" style="position:fixed;inset:0;background:#080d17;z-index:100000;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto"><form onsubmit="connectIPTV(event)" style="width:min(420px,100%);padding:26px;background:#131d2e;border:1px solid #344663;border-radius:20px;display:grid;gap:14px"><h1 style="font-size:23px">IPTV Player Ultimate</h1><p style="font-size:13px;color:#b5c4db">Verbinde deinen eigenen IPTV-Zugang. Zugangsdaten bleiben auf diesem Gerät gespeichert und werden beim nächsten Start wiederverwendet.</p><label>Serveradresse<input id="iptvHost" required type="url" placeholder="https://dein-anbieter.example" style="display:block;width:100%;padding:13px;margin-top:5px;background:#080d17;color:white;border:1px solid #52627b;border-radius:9px"></label><label>Benutzername<input id="iptvUser" required autocomplete="username" style="display:block;width:100%;padding:13px;margin-top:5px;background:#080d17;color:white;border:1px solid #52627b;border-radius:9px"></label><label>Passwort<input id="iptvPass" required type="password" autocomplete="current-password" style="display:block;width:100%;padding:13px;margin-top:5px;background:#080d17;color:white;border:1px solid #52627b;border-radius:9px"></label><p id="loginError" style="color:#ff8b8b;font-size:12px"></p><button type="submit" style="background:#2563eb;color:white;border:0;border-radius:10px;padding:14px;font-weight:700">IPTV verbinden</button><p style="color:#a5b4cb;font-size:11px">Hinweis: Für echte Benutzerkonten, geschützte Speicherung und HTTP-zu-HTTPS-Streaming wird zusätzlich ein sicherer Backend-Dienst benötigt.</p></form></div>
 
     <div id="loader">
         <div class="spinner"></div>
@@ -448,6 +448,17 @@
 
     <script>
         const API = {baseUrl: '', user: '', pass: ''};
+        const LOGIN_STORAGE_KEY = 'nova_iptv_v29_login';
+        function restoreIPTVLogin() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(LOGIN_STORAGE_KEY) || 'null');
+                if (!saved || !saved.host || !saved.username || !saved.password) return;
+                document.getElementById('iptvHost').value = saved.host;
+                document.getElementById('iptvUser').value = saved.username;
+                document.getElementById('iptvPass').value = saved.password;
+                connectIPTV({preventDefault() {}});
+            } catch (e) { console.warn('Saved IPTV login unavailable'); }
+        }
         function connectIPTV(event) {
             event.preventDefault();
             const host = document.getElementById('iptvHost').value.trim().replace(/\/+$/, '');
@@ -459,6 +470,7 @@
             }
             if (!/^https?:\/\//i.test(host)) {document.getElementById('loginError').textContent='Bitte eine vollständige Serveradresse mit https:// eingeben.';return;}
             API.baseUrl = host; API.user = username; API.pass = password;
+            try { localStorage.setItem(LOGIN_STORAGE_KEY, JSON.stringify({host,username,password})); } catch (e) {}
             document.getElementById('loginOverlay').style.display = 'none';
             initializeIPTV();
         }
@@ -667,6 +679,7 @@
         }
     </script>
     <script>
+      window.addEventListener('DOMContentLoaded', restoreIPTVLogin);
       if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
         window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
       }
