@@ -3,7 +3,7 @@
   "short_name": "IPTV V29",
   "start_url": "./",
   "scope": "./",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#000000",
   "theme_color": "#0b0f17",
   "icons": [
@@ -13,5 +13,10 @@
       "type": "image/svg+xml",
       "purpose": "any"
     }
-  ]
+  ],
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
+  "id": "/Nova-IPTV-Web/IPTV-Player-V29/"
 }
