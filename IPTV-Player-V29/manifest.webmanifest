@@ -1,9 +1,9 @@
 {
   "name": "IPTV Player Ultimate V29",
   "short_name": "IPTV V29",
-  "start_url": "./",
+  "start_url": "./?pwa=1",
   "scope": "./",
-  "display": "fullscreen",
+  "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#0b0f17",
   "icons": [
@@ -27,8 +27,9 @@
     }
   ],
   "display_override": [
-    "fullscreen",
-    "standalone"
+    "standalone",
+    "fullscreen"
   ],
-  "id": "/Nova-IPTV-Web/IPTV-Player-V29/"
+  "id": "/Nova-IPTV-Web/IPTV-Player-V29/",
+  "description": "Nova IPTV Web Player"
 }
